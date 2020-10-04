@@ -8,6 +8,7 @@ import os
 import colorama
 from termcolor import colored, cprint
 import pyfiglet
+import getpass
 
 # bg-color = 'on_grey'
 
@@ -26,13 +27,20 @@ class User():
 
 	# list containing the list of all registered users
 	user_list = []		
+	pass_list = []
 	# text file mastersheet contains entries in the format:
 	# [users, password, user_dir(address)]
 	masterfile = "mastersheet.txt"	
 
-	def __init__(self, name, pas):
+	def __init__(self, name):
+		"""
+			Args:
+				name(str): unique user name of the user
+				dir_address(str): path to the dir that will store all the to-do
+				notes of the user
+		"""
 		self.username = name
-		self.password = pas 
+		self.dir_address = os.path.join(os.getcwd(), 'User', self.username) 
 
 	def welcome_user(self):
 		"""
@@ -46,7 +54,7 @@ class User():
 			Returns:
 				None
 		"""
-		text =  pyfiglet.figlet_format(f"Welcom {self.username}", font="starwars")
+		text =  pyfiglet.figlet_format(f"Welcome {self.username}", font="starwars")
 		to_print = colored(text)
 		colorama.init()
 		cprint(text, 'cyan', 'on_grey', attrs=['bold'])
@@ -106,7 +114,7 @@ class User():
 		print("A strong password should contain a number and an uppercase letter \
 			(min len: 4  max len: 8) ")
 		print("Enter a strong password")
-		password = str(input())
+		password = str(getpass.getpass())
 
 		is_strong = False
 		first_attempt = True
@@ -196,11 +204,84 @@ class User():
 
 		# record the user in the mastersheet
 		with open(User.masterfile, 'w+') as f:
-			f.writelines([name, password, dir_address])
+			f.writelines([name, ",", password, ",",  dir_address])
 		# display success message 
 		cprint("Registration succesful!!", 'green', 'on_grey')
 
 		return True, dir_address, name
+
+	@classmethod
+	def authenticate_user(cls):
+		"""
+			This method matches the entered username and password with the 
+			mastersheet and lets the user login into/exit from the TO-DO list
+			
+			Args:
+				None
+
+			Returns:
+				(boolean)
+				- True if the entered values match an entry in the mastersheet
+				- False if the entered values do not match and user wants to exit 
+
+				name(str):
+				- the username for User object creation
+
+		"""
+
+		correct_name = False
+		while(not correct_name):
+			cprint("username:", 'yellow', 'on_grey', attrs=['bold'])
+			name = str(input())
+			if name in User.user_list:
+				correct_name = True
+			else:
+				cprint("Unrecognized Username", 'red', 'on_grey')
+				print("Enter a valid username")
+				continue
+		
+		correct_pass = False					
+		while(not correct_pass):
+			cprint("password:", "yellow", 'on_grey', attrs=['bold'])
+			password = str(getpass.getpass())
+			real_pass = cls.pass_list[cls.user_list.index(name)]
+			# == can not be replaced by is 
+			if real_pass == password:
+				# return name and dir address of user
+				return True, name
+			else:
+				cprint("Wrong password, press 1 to try again")
+				try_again = str(input())
+				if try_again is '1':
+					continue
+				else:
+					return False, ''
+
+	# def display_options(self):
+	# 	cprint("Choose from the following options:", 'magenta', 'on_grey')
+	# 	cprint("1. Create a new to-do list", 'magenta', 'on_grey')
+	# 	cprint("2. Add a task to the list", 'magenta', 'on_grey')
+	# 	cprint("3. Delete a task from the list ", 'magenta', 'on_grey')
+	# 	cprint("4. View a list of all the to-do list", 'magenta', 'on_grey')
+	# 	cprint("5. ", 'magenta', 'on_grey')
+	# 	cprint("", 'magenta', 'on_grey')
+	# 	cprint("", 'magenta', 'on_grey')
+	# 	cprint("", 'magenta', 'on_grey')
+	# 	cprint("", 'magenta', 'on_grey')
+	# 	cprint("", 'magenta', 'on_grey')
+	# 	cprint("", 'magenta', 'on_grey')
+	# 	cprint("", 'magenta', 'on_grey')
+
+	@classmethod
+	def load_user_data(cls):
+		with open(cls.masterfile, 'r') as f:
+			for line in f.readlines():
+				line = line.strip()
+				creds = line.split(',')
+				# add username 
+				cls.user_list.append(creds[0])
+				# add user pass
+				cls.pass_list.append(creds[1])
 
 # main function 
 def main():
@@ -208,22 +289,41 @@ def main():
 	path = os.path.join(os.getcwd(), 'Users')
 	if not os.path.isdir(path):
 		os.makedirs(path)
-		print("created dir Users")
-
-	print("Welcome to TO-DO list ")
+	# Welcome Text 
+	text =  pyfiglet.figlet_format("TO-DO List", font="starwars")
+	to_print = colored(text)
+	colorama.init()
+	cprint(text, 'cyan', 'on_grey', attrs=['bold'])
+	# Load user data
+	User.load_user_data()
+	
+	name = ''
+	password = ''
+	
 	print("Are you a registerd user? \n  y/n")
 	ans = str(input())
+	# new user
 	if ans is 'n':
 		registered, dir_add, name = User.register_user()
-		if registered:
-			usr = User(name, dir_add)
-			usr.welcome_user()
-			#usr.display_options()
-		else:
+		if not registered:
 			print("Hope to see you again soon!")
+			return
+			#usr.display_options()
+	# registered user 		 
 	elif ans is 'y':
 		# TO-DO
-		pass	
+		is_valid_user, name = User.authenticate_user()
+		if is_valid_user is False:
+			print("Exiting the program")
+			return 
+
+	usr = User(name)
+	usr.welcome_user()
+	#usr.display_options()
+
+		
+
+		
 
 # call for main
 main()
