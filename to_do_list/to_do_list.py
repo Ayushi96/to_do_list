@@ -273,7 +273,7 @@ class User():
 
 	@classmethod
 	def load_user_data(cls):
-		with open(cls.masterfile, 'r') as f:
+		with open(cls.masterfile, 'w+') as f:
 			for line in f.readlines():
 				line = line.strip()
 				creds = line.split(',')
