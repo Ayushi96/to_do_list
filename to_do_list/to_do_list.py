@@ -9,7 +9,7 @@ import colorama
 from termcolor import colored, cprint
 import pyfiglet
 import getpass
-
+import glob
 # bg-color = 'on_grey'
 
 class User():
@@ -40,7 +40,7 @@ class User():
 				notes of the user
 		"""
 		self.username = name
-		self.dir_address = os.path.join(os.getcwd(), 'User', self.username) 
+		self.dir_address = os.path.join(os.getcwd(), 'Users', self.username) 
 
 	def welcome_user(self):
 		"""
@@ -257,20 +257,19 @@ class User():
 				else:
 					return False, ''
 
-	# def display_options(self):
-	# 	cprint("Choose from the following options:", 'magenta', 'on_grey')
-	# 	cprint("1. Create a new to-do list", 'magenta', 'on_grey')
-	# 	cprint("2. Add a task to the list", 'magenta', 'on_grey')
-	# 	cprint("3. Delete a task from the list ", 'magenta', 'on_grey')
-	# 	cprint("4. View a list of all the to-do list", 'magenta', 'on_grey')
-	# 	cprint("5. ", 'magenta', 'on_grey')
-	# 	cprint("", 'magenta', 'on_grey')
-	# 	cprint("", 'magenta', 'on_grey')
-	# 	cprint("", 'magenta', 'on_grey')
-	# 	cprint("", 'magenta', 'on_grey')
-	# 	cprint("", 'magenta', 'on_grey')
-	# 	cprint("", 'magenta', 'on_grey')
-	# 	cprint("", 'magenta', 'on_grey')
+	def display_options(self):
+		cprint("Choose from the following options:", 'cyan', 'on_grey')
+		cprint("1. Create a new to-do list", 'cyan', 'on_grey')
+		cprint("2. Add a task to the list", 'cyan', 'on_grey')
+		cprint("3. Delete a task from the list ", 'cyan', 'on_grey')
+		cprint("4. View a list of all the to-do list", 'cyan', 'on_grey')
+		cprint("5. View Content of a to-do list", 'cyan', 'on_grey')
+		cprint("6. Mark a task complete", 'cyan', 'on_grey')
+		#cprint("7. Sort to-do list by priority", 'cyan', 'on_grey')
+		#cprint("8. Edit priority of task ", 'cyan', 'on_grey')
+		cprint("7. Delete a to-do list", 'cyan', 'on_grey')
+		cprint("Press 0 to Exit", 'cyan', 'on_grey')
+		
 
 	@classmethod
 	def load_user_data(cls):
@@ -282,6 +281,231 @@ class User():
 				cls.user_list.append(creds[0])
 				# add user pass
 				cls.pass_list.append(creds[1])
+
+	def create_note(self):
+		"""
+			This method creates an empty text file in the user's directory
+		"""
+		print("What will be the to-do note be about ? \n Please provide a title")
+		title = str(input())
+		title += ".txt"
+		
+		os.chdir(self.dir_address)
+		print(f"current dir = {os.getcwd()} ")
+		with open(title, 'w+') as f:
+			f.writelines(["Task", '\t', "Priority", '\t', "Task Status"])
+		cprint("To-do note created ")
+
+	def add_task(self):
+		"""
+			This method takes input of the note title that was created and 
+			 writes a line in the note that was created. If the note does not exist
+			 it displays the option of note titles that can be chosen for and gives
+			 an option to re-enter the title or exit 
+
+		"""
+		while(True):
+
+			print("Please enter the title of the note in which you wish to add the task")
+			title = str(input())
+			# change to user's directory
+			os.chdir(self.dir_address)
+			title += '.txt'
+			if not os.path.isfile(title):
+				cprint(f"There is no note titled '{title}'! ", 'red', 'on_grey')
+				print("Please provide a title from this list")
+				# display all the notes
+				self.show_notes()
+				print("Press 1 to continue or 0 to exit")
+				choice = str(input())
+				if choice is "0":
+					print("user wants to exit !")
+					return
+				else:
+				 continue
+			else:
+				print("Please enter the task to be added")
+				task = str(input())
+				print("Enter the priority of the task[eg. High, Medium or Low]")
+				priority = str(input())
+				
+
+				with open(title, 'a+') as f:
+					f.writelines([task, "\t\t\t\t", priority, '\t\t\t\t', "WIP", '\n'])
+				cprint("task added succesfully!", 'green', 'on_grey')
+				break
+			return
+
+	def delete_task(self):
+		"""
+			This method takes input of a valid note title and displays the tasks 
+			in that note which can be deleted. It then asks for the user to select 
+			which task has to be deleted and then removes that line from the ntoe
+			file.
+		"""
+		
+		#print("List of tasks in this to-do note:\n")
+		# display all the tasks in this to-do note
+		n_tasks, title = self.display_tasks()
+		if int(n_tasks) == 0:
+			cprint("No tasks to delete! Add a task 1st!", 'red', 'on_grey') 
+			return
+		
+		while(True):
+
+			print("Enter the task number which you want to delete")
+			choice = str(input())
+			print(f"choice = {choice}")
+			if int(choice) > n_tasks:
+				cprint("Invalid task number", 'red', 'on_grey')
+			else:
+				break 
+
+		os.chdir(self.dir_address)
+		
+		with open(title, 'r+') as f:
+			tasks = f.readlines()
+			f.close()
+		
+		# delete the specified task from the list 
+		del tasks[int(choice) - 1]
+		with open(title, 'w+') as f:
+			for task in tasks:
+				f.writelines([task])
+		cprint("deleted the task succesfully!", 'green', 'on_grey')
+		
+
+		return
+
+	def show_notes(self):
+		"""
+			This method displays the title of all the to-do notes added by the 
+			user.
+		"""
+		print("You have the following to-do notes added: \n")
+		for n, note in enumerate(glob.glob(self.dir_address + '\\*.txt')):
+			title = note.split('\\')
+			title_name = title[-1].strip(".txt")
+			print(f"{n+1}. {title_name}")
+
+	def display_tasks(self):
+		"""
+			This method displays all the tasks that have been added by the user 
+			under some todo note along with the task's priority and status.
+		"""
+		while(True):
+
+			print("Please enter the title of the note")
+			title = str(input())
+			title += '.txt'
+			# change to user's directory 
+			os.chdir(self.dir_address)
+			if not os.path.isfile(title):
+				cprint(f"There is no note titled '{title}'! ", 'red', 'on_grey')
+				print("Please provide a title from this list")
+				# display all the notes
+				self.show_notes()
+				print("Press 1 to continue or 0 to exit")
+				choice = str(input())
+				if choice is "0":
+					print("user wants to exit !")
+					return
+				else:
+					continue
+
+			else:
+				with open(title, 'r') as f:
+					tasks = f.readlines()
+					for n, task in enumerate(tasks):
+						print(f"{n+1}. {task}")
+					break
+
+		return len(tasks), title
+
+	def mark_complete(self):
+		"""
+			This method changes the status of a task to complete!
+		"""
+		n_tasks, title = self.display_tasks()
+		print(f"n tasks = {n_tasks}")
+		if int(n_tasks) == 0:
+			cprint("No tasks to mark complete! Add a task 1st!", 'red', 'on_grey') 
+			return
+		
+		while(True):
+
+			print("Enter the task number which you want to mark as complete")
+			choice = str(input())
+			print(f"choice = {choice}")
+			if int(choice) > n_tasks:
+				cprint("Invalid task number", 'red', 'on_grey')
+			else:
+				print("right choice")
+				break 
+
+		os.chdir(self.dir_address)
+		with open(title, 'r+') as f:
+			tasks = f.readlines()
+			f.close()
+
+		# mark the specified task from the list as complete
+		line = tasks[int(choice) -1]
+		s_line = line.strip('\n')
+		s_line = s_line.split('\t\t\t\t')
+		s_line[-1] = 'Complete'
+		new_line = '\t\t\t\t'.join(s_line)
+		new_line += '\n'
+
+		with open(title, 'w+') as f:
+			for n, task in enumerate(tasks):
+				if n +1 == int(choice):
+					f.writelines([new_line])
+					continue
+				f.writelines([task])
+		cprint("marked the task as complete succesfully!", 'green', 'on_grey')
+		
+
+		return
+
+	def delete_note(self):
+		"""
+			This method deletes the todo note that is entered by the user.
+		"""
+		# displat the titles of all the notes added by the user so far
+		self.show_notes()
+		os.chdir(self.dir_address)
+		while(True):
+
+			print("Please enter the title of the note you want to delete")
+			title = str(input())
+			title += '.txt'
+			# change to user's directory 
+			os.chdir(self.dir_address)
+			if not os.path.isfile(title):
+				cprint(f"There is no note titled '{title}'! ", 'red', 'on_grey')
+				print("Please provide a title from this list")
+				# display all the notes
+				self.show_notes()
+				print("Press 1 to continue or 0 to exit")
+				choice = str(input())
+				if choice is "0":
+					print("user wants to exit !")
+					return
+				else:
+					continue
+
+			else:
+				os.remove(title)
+				cprint("To-do note deleted succesfully", 'green', 'on_grey')
+				break
+		return
+
+
+		
+
+
+
+
 
 # main function 
 def main():
@@ -319,7 +543,33 @@ def main():
 
 	usr = User(name)
 	usr.welcome_user()
-	#usr.display_options()
+	usr.display_options()
+	while(True):
+		print("Enter your choice")
+		choice = str(input())
+		# user wants to exit 
+		if choice is "0":
+			return
+		# create a note
+		if choice is "1":
+			usr.create_note()
+		# add a task in note
+		if choice is "2":
+			usr.add_task()
+		# delete a task in the todo note 
+		if choice is "3":
+			usr.delete_task()
+		# display a list of all the notes added by user
+		if choice is "4":
+			usr.show_notes()
+		# display all the tasks in a given note 
+		if choice is "5":
+			_ = usr.display_tasks()
+		# mark a task as complete
+		if choice is "6":
+			usr.mark_complete()
+
+
 
 		
 
